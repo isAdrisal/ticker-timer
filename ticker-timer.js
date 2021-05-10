@@ -1,30 +1,44 @@
+const animationInterval = (ms, timerStart, signal, callback) => {
+  const frame = time => {
+    if (signal.aborted) return;
+    callback(time);
+    scheduleFrame(time);
+  };
+
+  const scheduleFrame = time => {
+    const elapsed = time - timerStart;
+    const roundedElapsed = Math.round(elapsed / ms) * ms;
+    const targetNext = timerStart + roundedElapsed + ms;
+    const delay = targetNext - performance.now();
+    setTimeout(() => requestAnimationFrame(frame), delay);
+  };
+
+  scheduleFrame(timerStart);
+};
+
+const padNum = number => String(number).padStart(2, '0');
+
+const formatTime = timeDiff => {
+  let day = padNum(Math.floor(timeDiff / (1000 * 60 * 60 * 24)));
+  let hour = padNum(Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+  let minute = padNum(Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)));
+  let second = padNum(Math.floor((timeDiff % (1000 * 60)) / 1000));
+
+  return {
+    day,
+    hour,
+    minute,
+    second,
+  };
+};
+
 customElements.define(
   'ticker-timer',
   class TickerTimer extends HTMLElement {
     // Specify observed attributes so that attributeChangedCallback will work
     static get observedAttributes() {
-      return ['target', 'direction', 'segments'];
+      return ['target', 'direction'];
     }
-
-    /**
-     * Pass the value of `segments` attribute to this function.
-     * Returns an array with the segments that should be displayed.
-     * If no `segment` attribute exists or the value is empty, default
-     * to the full `segments` array.
-     */
-    getSegmentsList = segments => {
-      const segmentsOrder = ['days', 'hours', 'minutes', 'seconds'];
-      if (!segments || '') {
-        return segmentsOrder;
-      }
-
-      const segmentsInput = segments.toLowercase();
-      const segmentsOutput = segmentsOrder.map(segment =>
-        segmentsInput.includes(segment) ? segment : null
-      );
-
-      return segmentsOutput.filter(Boolean);
-    };
 
     constructor() {
       super();
@@ -35,17 +49,12 @@ customElements.define(
        */
       const shadowRoot = this.attachShadow({ mode: 'open' });
 
-      // Get settings from element attributes
-      const target = this.getAttribute('target');
-      const direction = this.getAttribute('direction');
-      const segments = this.getAttribute('segments');
-
       // Create container <div>
       const container = document.createElement('div');
       container.setAttribute('part', 'container');
 
       // Create ticker segment HTML
-      const segmentsList = this.getSegmentsList(segments);
+      const segmentsList = ['day', 'hour', 'minute', 'second'];
 
       const segmentTemplate = segment => `
         <div part="segment__wrapper">
@@ -84,19 +93,46 @@ customElements.define(
     }
 
     connectedCallback() {
-      console.log('ticker-timer element added to page.');
+      // Set up selectors
+      const segmentSelectors = {
+        day: this.shadowRoot.querySelector('[data-day]'),
+        hour: this.shadowRoot.querySelector('[data-hour]'),
+        minute: this.shadowRoot.querySelector('[data-minute]'),
+        second: this.shadowRoot.querySelector('[data-second]'),
+      };
+
+      /**
+       * Get settings from element attributes.
+       * target — date-time string in the format: yyyy-mm-ddThh:mm:ss.mmm+hh:mm
+       */
+      const targetAttr = this.getAttribute('target');
+      const target = targetAttr && targetAttr !== '' ? targetAttr : null;
+      const targetDateTime = target ? new Date(targetAttr).getTime() : null;
+
+      const now = targetDateTime ? Date.now() : null;
+      const timerStart = Math.floor(
+        document.timeline ? document.timeline.currentTime : performance.now()
+      );
+
+      const controller = new AbortController();
+
+      const printTime = (time, now, targetDateTime) => {
+        let diffTime = targetDateTime ? targetDateTime - time + now : time;
+        const {day, hour, minute, second} = formatTime(diffTime);
+        // TODO: update DOM with current time
+        // TODO: use IntlLocale stuff to dynamically set labels
+      };
+
+      // Create an animation callback every second
+      animationInterval(1000, timerStart, controller.signal, time =>
+        printTime(time)
+      );
     }
 
-    disconnectedCallback() {
-      console.log('ticker-timer element removed from page.');
-    }
+    disconnectedCallback() {}
 
-    adoptedCallback() {
-      console.log('ticker-timer element moved to new page.');
-    }
+    adoptedCallback() {}
 
-    attributeChangedCallback(name, oldValue, newValue) {
-      console.log('ticker-timer element attributes changed.');
-    }
+    attributeChangedCallback(name, oldValue, newValue) {}
   }
 );
