@@ -116,6 +116,7 @@ customElements.define(
     }
 
     connectedCallback() {
+      // TODO: Maybe move targetDateTime and now inside constructor.
       const targetDateTime = this.target ? Date.parse(this.target) : null;
       const now = targetDateTime ? Date.now() : null;
       const timerStart = Math.floor(
