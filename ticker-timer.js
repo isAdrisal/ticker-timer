@@ -23,9 +23,9 @@ customElements.define(
       const segmentsList = ['day', 'hour', 'minute', 'second'];
 
       const segmentTemplate = segment => `
-        <div part="segment__wrapper">
-          <span part="segment__digits" data-${segment}>--</span>
-          <span part="segment__label">${segment}</span>
+        <div part="segment__wrapper" data-${segment}>
+          <span part="segment__digits" data-value>--</span>
+          <span part="segment__label" data-label>${segment}s</span>
         </div>
       `;
 
@@ -66,7 +66,7 @@ customElements.define(
       };
 
       // Timer logic
-      this.controller = new AbortController;
+      this.controller = new AbortController();
 
       this.animationInterval = (ms, timerStart, signal, callback) => {
         const frame = time => {
@@ -106,12 +106,21 @@ customElements.define(
         };
       };
 
+      this.updateSegments = segmentData => {
+        for (const [segmentType, value] of Object.entries(
+          segmentData
+        ).reverse()) {
+          const segmentWrapper = this.segmentSelectors[segmentType];
+          const segmentValue = segmentWrapper.querySelector('[data-value]');
+          segmentValue.textContent = value;
+        }
+      };
+
       this.printTime = (time, now, timerStart, targetDateTime) => {
-        let diffTime = targetDateTime ? targetDateTime - (time + now) : time - timerStart;
-        const { day, hour, minute, second } = this.formatTime(diffTime);
-        // console.log(day, hour, minute, second);
-        // TODO: update DOM with current time
-        // TODO: use IntlLocale stuff to dynamically set labels
+        let diffTime = targetDateTime
+          ? targetDateTime - (time + now)
+          : time - timerStart;
+        this.updateSegments(this.formatTime(diffTime));
       };
 
       this.init = () => {
@@ -119,7 +128,7 @@ customElements.define(
          * We call abort() first to abort any previously-running timer
          * before creating our new controller. This ensures that we don't
          * have multiple timers running when the `target` attribute is changed.
-         * 
+         *
          * By creating the controller in the constructor initially, it also
          * allows us to abort the timer when the component is removed, through
          * the disconnectedCallback();
@@ -135,7 +144,7 @@ customElements.define(
         const timerStart = Math.floor(
           document.timeline ? document.timeline.currentTime : performance.now()
         );
-        
+
         // Create an animation callback every second
         this.animationInterval(1000, timerStart, this.controller.signal, time =>
           this.printTime(time, now, timerStart, targetDateTime)
