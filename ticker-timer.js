@@ -3,18 +3,11 @@ customElements.define(
   class TickerTimer extends HTMLElement {
     // Specify observed attributes so that attributeChangedCallback will work
     static get observedAttributes() {
-      return ['target', 'direction'];
+      return ['target'];
     }
 
     constructor() {
       super();
-
-      /**
-       * Get settings from element attributes.
-       * target — date-time string in the format: yyyy-mm-ddThh:mm:ss.mmm+hh:mm
-       */
-       const targetAttr = this.getAttribute('target');
-       this.target = targetAttr && targetAttr !== '' ? targetAttr : null;
 
       /**
        * Create shadowDOM and add internal HTML. attachShadow() returns
@@ -72,13 +65,16 @@ customElements.define(
         second: this.shadowRoot.querySelector('[data-second]'),
       };
 
+      // Timer logic
+      this.controller = new AbortController;
+
       this.animationInterval = (ms, timerStart, signal, callback) => {
         const frame = time => {
           if (signal.aborted) return;
           callback(time);
           scheduleFrame(time);
         };
-      
+
         const scheduleFrame = time => {
           const elapsed = time - timerStart;
           const roundedElapsed = Math.round(elapsed / ms) * ms;
@@ -86,18 +82,22 @@ customElements.define(
           const delay = targetNext - performance.now();
           setTimeout(() => requestAnimationFrame(frame), delay);
         };
-      
+
         scheduleFrame(timerStart);
       };
-      
+
       this.padNum = number => String(number).padStart(2, '0');
-      
+
       this.formatTime = timeDiff => {
         let day = this.padNum(Math.floor(timeDiff / (1000 * 60 * 60 * 24)));
-        let hour = this.padNum(Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-        let minute = this.padNum(Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)));
+        let hour = this.padNum(
+          Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        );
+        let minute = this.padNum(
+          Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+        );
         let second = this.padNum(Math.floor((timeDiff % (1000 * 60)) / 1000));
-      
+
         return {
           day,
           hour,
@@ -106,34 +106,54 @@ customElements.define(
         };
       };
 
-      this.printTime = (time, now, targetDateTime) => {
-        let diffTime = targetDateTime ? targetDateTime - time + now : time;
-        const {day, hour, minute, second} = this.formatTime(diffTime);
+      this.printTime = (time, now, timerStart, targetDateTime) => {
+        let diffTime = targetDateTime ? targetDateTime - (time + now) : time - timerStart;
+        const { day, hour, minute, second } = this.formatTime(diffTime);
         // console.log(day, hour, minute, second);
         // TODO: update DOM with current time
         // TODO: use IntlLocale stuff to dynamically set labels
       };
+
+      this.init = () => {
+        /**
+         * We call abort() first to abort any previously-running timer
+         * before creating our new controller. This ensures that we don't
+         * have multiple timers running when the `target` attribute is changed.
+         * 
+         * By creating the controller in the constructor initially, it also
+         * allows us to abort the timer when the component is removed, through
+         * the disconnectedCallback();
+         */
+        this.controller.abort();
+        this.controller = new AbortController();
+
+        const targetAttr = this.getAttribute('target');
+        const target = targetAttr && targetAttr !== '' ? targetAttr : null;
+
+        const targetDateTime = target ? Date.parse(target) : null;
+        const now = Date.now();
+        const timerStart = Math.floor(
+          document.timeline ? document.timeline.currentTime : performance.now()
+        );
+        
+        // Create an animation callback every second
+        this.animationInterval(1000, timerStart, this.controller.signal, time =>
+          this.printTime(time, now, timerStart, targetDateTime)
+        );
+      };
     }
 
     connectedCallback() {
-      // TODO: Maybe move targetDateTime and now inside constructor.
-      const targetDateTime = this.target ? Date.parse(this.target) : null;
-      const now = targetDateTime ? Date.now() : null;
-      const timerStart = Math.floor(
-        document.timeline ? document.timeline.currentTime : performance.now()
-      );
-
-      // Create an animation callback every second
-      const controller = new AbortController();
-      this.animationInterval(1000, timerStart, controller.signal, time =>
-        this.printTime(time, now, targetDateTime)
-      );
+      this.init();
     }
 
-    disconnectedCallback() {}
+    disconnectedCallback() {
+      this.controller.abort();
+    }
 
-    adoptedCallback() {}
-
-    attributeChangedCallback(name, oldValue, newValue) {}
+    attributeChangedCallback(name, oldValue, newValue) {
+      if (name !== 'target') return;
+      this.init();
+    }
   }
 );
