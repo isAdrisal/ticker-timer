@@ -98,6 +98,14 @@ customElements.define(
           second,
         };
       };
+
+      this.printTime = (time, now, targetDateTime) => {
+        let diffTime = targetDateTime ? targetDateTime - time + now : time;
+        const {day, hour, minute, second} = this.formatTime(diffTime);
+        // console.log(day, hour, minute, second);
+        // TODO: update DOM with current time
+        // TODO: use IntlLocale stuff to dynamically set labels
+      };
     }
 
     connectedCallback() {
@@ -114,18 +122,10 @@ customElements.define(
         document.timeline ? document.timeline.currentTime : performance.now()
       );
 
-      const controller = new AbortController();
-
-      const printTime = (time, now, targetDateTime) => {
-        let diffTime = targetDateTime ? targetDateTime - time + now : time;
-        const {day, hour, minute, second} = this.formatTime(diffTime);
-        // TODO: update DOM with current time
-        // TODO: use IntlLocale stuff to dynamically set labels
-      };
-
       // Create an animation callback every second
+      const controller = new AbortController();
       this.animationInterval(1000, timerStart, controller.signal, time =>
-        printTime(time)
+        this.printTime(time)
       );
     }
 
