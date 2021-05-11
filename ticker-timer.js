@@ -10,6 +10,13 @@ customElements.define(
       super();
 
       /**
+       * Get settings from element attributes.
+       * target — date-time string in the format: yyyy-mm-ddThh:mm:ss.mmm+hh:mm
+       */
+       const targetAttr = this.getAttribute('target');
+       this.target = targetAttr && targetAttr !== '' ? targetAttr : null;
+
+      /**
        * Create shadowDOM and add internal HTML. attachShadow() returns
        * the shadowRoot which we use to append DOM and styles.
        */
@@ -109,14 +116,7 @@ customElements.define(
     }
 
     connectedCallback() {
-      /**
-       * Get settings from element attributes.
-       * target — date-time string in the format: yyyy-mm-ddThh:mm:ss.mmm+hh:mm
-       */
-      const targetAttr = this.getAttribute('target');
-      const target = targetAttr && targetAttr !== '' ? targetAttr : null;
-      const targetDateTime = target ? Date.parse(targetAttr) : null;
-
+      const targetDateTime = this.target ? Date.parse(this.target) : null;
       const now = targetDateTime ? Date.now() : null;
       const timerStart = Math.floor(
         document.timeline ? document.timeline.currentTime : performance.now()
@@ -125,7 +125,7 @@ customElements.define(
       // Create an animation callback every second
       const controller = new AbortController();
       this.animationInterval(1000, timerStart, controller.signal, time =>
-        this.printTime(time)
+        this.printTime(time, now, targetDateTime)
       );
     }
 
