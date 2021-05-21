@@ -130,11 +130,33 @@ customElements.define(
         this.controller.abort();
         this.controller = new AbortController();
 
+        /**
+         * Retrieve the target date passed as an attribute.
+         * Early return if it's an invalid date format.
+         */
         const targetAttr = this.getAttribute('target');
         const target = targetAttr !== '' ? new Date(targetAttr) : null;
         if (target instanceof Date && isNaN(target)) return;
 
-        const targetDateTime = target ? Date.parse(target) : null;
+        /**
+         * Make the element more accessible by adding an aria-label
+         * and allowing it to be focusable with tabIndex="0".
+         */
+        this.ariaLabel = target
+          ? `Countdown to ${target.toLocaleString(undefined, {
+              timeStyle: 'long',
+              dateStyle: 'medium',
+            })}`
+          : 'Timer';
+
+        this.tabIndex = this.getAttribute('tabIndex')
+          ? this.getAttribute('tabIndex')
+          : 0;
+
+        /**
+         * Set up and start the timer functionality.
+         */
+        const targetDateTime = target?.getTime();
         const now = Date.now();
         const timerStart = Math.floor(
           document.timeline ? document.timeline.currentTime : performance.now()
@@ -155,7 +177,7 @@ customElements.define(
       this.controller.abort();
     }
 
-    attributeChangedCallback(name, oldValue, newValue) {
+    attributeChangedCallback(name) {
       if (name !== 'target') return;
       this.init();
     }
