@@ -22,6 +22,7 @@ customElements.define(
       // Create ticker segment HTML
       const segmentsList = ['day', 'hour', 'minute', 'second'];
 
+      const template = document.createElement('template');
       const segmentTemplate = segment => `
         <div part="segment__wrapper" data-${segment}>
           <span part="segment__digits" data-value>--</span>
@@ -29,10 +30,14 @@ customElements.define(
         </div>
       `;
 
-      const template = document.createElement('template');
-      segmentsList.forEach(segment => {
+      const separatorTemplate = document.createElement('template');
+      separatorTemplate.innerHTML = `<div part="separator">:</div>`;
+
+      segmentsList.forEach((segment, index) => {
         template.innerHTML = segmentTemplate(segment);
         container.appendChild(template.content.cloneNode(true));
+        if (index < 3)
+          container.appendChild(separatorTemplate.content.cloneNode(true));
       });
 
       const style = document.createElement('style');
