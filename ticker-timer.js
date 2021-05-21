@@ -131,7 +131,8 @@ customElements.define(
         this.controller = new AbortController();
 
         const targetAttr = this.getAttribute('target');
-        const target = targetAttr && targetAttr !== '' ? targetAttr : null;
+        const target = targetAttr !== '' ? new Date(targetAttr) : null;
+        if (target instanceof Date && isNaN(target)) return;
 
         const targetDateTime = target ? Date.parse(target) : null;
         const now = Date.now();
