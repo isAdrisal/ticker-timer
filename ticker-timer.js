@@ -88,43 +88,39 @@ customElements.define(
       this.padNum = number => String(number).padStart(2, '0');
 
       this.formatTime = timeDiff => {
-        let day = this.padNum(Math.floor(timeDiff / (1000 * 60 * 60 * 24)));
-        let hour = this.padNum(
-          Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        );
-        let minute = this.padNum(
-          Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
-        );
-        let second = this.padNum(Math.floor((timeDiff % (1000 * 60)) / 1000));
+        const formatter = new Date(0);
+        formatter.setUTCMilliseconds(timeDiff);
+
+        let day = Math.floor(timeDiff / 86400000);
+        let hour = formatter.getUTCHours(timeDiff);
+        let minute = formatter.getUTCMinutes(timeDiff);
+        let second = formatter.getUTCSeconds(timeDiff);
 
         return {
-          day,
-          hour,
-          minute,
           second,
+          minute,
+          hour,
+          day,
         };
-      };
-
-      this.updateSegments = segmentData => {
-        for (const [segmentType, value] of Object.entries(
-          segmentData
-        ).reverse()) {
-          const segmentWrapper = this.segmentSelectors[segmentType];
-          const segmentValue = segmentWrapper.querySelector('[data-value]');
-          segmentValue.textContent = value;
-        }
       };
 
       this.printTime = (time, now, timerStart, targetDateTime) => {
         let diffTime = targetDateTime
           ? targetDateTime - (time + now)
           : time - timerStart;
-        this.updateSegments(this.formatTime(diffTime));
+        const formattedTime = this.formatTime(diffTime);
+
+        Object.entries(formattedTime).forEach(entry => {
+          const [segmentType, value] = entry;
+          const segmentWrapper = this.segmentSelectors[segmentType];
+          const segmentValue = segmentWrapper.querySelector('[data-value]');
+          segmentValue.textContent = this.padNum(value);
+        });
       };
 
       this.init = () => {
         /**
-         * We call abort() first to abort any previously-running timer
+         * We call abort() first to abort any previously-running timers
          * before creating our new controller. This ensures that we don't
          * have multiple timers running when the `target` attribute is changed.
          *
@@ -147,12 +143,7 @@ customElements.define(
          * Make the element more accessible by adding an aria-label
          * and allowing it to be focusable with tabIndex="0".
          */
-        this.ariaLabel = target
-          ? `Countdown to ${target.toLocaleString(undefined, {
-              timeStyle: 'long',
-              dateStyle: 'medium',
-            })}`
-          : 'Timer';
+        this.ariaLabel = target ? 'Countdown' : 'Timer';
 
         this.tabIndex = this.getAttribute('tabIndex')
           ? this.getAttribute('tabIndex')
