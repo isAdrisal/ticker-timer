@@ -29,28 +29,22 @@ customElements.define(
         </div>
       `;
 
+      const template = document.createElement('template');
       segmentsList.forEach(segment => {
-        const fragment = document
-          .createRange()
-          .createContextualFragment(segmentTemplate(segment).trim());
-        container.appendChild(fragment);
+        template.innerHTML = segmentTemplate(segment);
+        container.appendChild(template.content.cloneNode(true));
       });
 
       const style = document.createElement('style');
       style.textContent = `
         [part="container"] {
           display: flex;
-          flex-flow: row nowrap;
         }
 
         [part="segment__wrapper"] {
           display: flex;
           flex-direction: column;
           align-items: center;
-        }
-
-        [part="segment__wrapper"]:not(:last-of-type) {
-          margin-right: 1rem;
         }
       `;
 
